@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Play } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import {
   formatDate,
@@ -10,6 +10,7 @@ import {
 import type {
   DashboardRecentMention,
   DashboardTitle,
+  DashboardYoutubeMetric,
 } from '../types/dashboard'
 
 function formatNullableScore(value: number | null | undefined) {
@@ -18,6 +19,15 @@ function formatNullableScore(value: number | null | undefined) {
   }
 
   return Number(value).toFixed(1)
+}
+
+function formatCompactNumber(value: number | null | undefined) {
+  if (value === null || value === undefined) return '—'
+
+  return new Intl.NumberFormat('pt-BR', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value)
 }
 
 function formatSentimentLabel(label: string | null) {
@@ -51,11 +61,32 @@ function formatReviewDate(date: string | null) {
   return new Date(date).toLocaleDateString('pt-BR')
 }
 
+function getYoutubeHypeLabel(video: DashboardYoutubeMetric) {
+  const views = Number(video.view_count ?? 0)
+  const likes = Number(video.like_count ?? 0)
+  const comments = Number(video.comment_count ?? 0)
+
+  if (views >= 10_000_000 || likes >= 300_000 || comments >= 50_000) {
+    return 'Hype muito alto'
+  }
+
+  if (views >= 1_000_000 || likes >= 80_000 || comments >= 10_000) {
+    return 'Hype alto'
+  }
+
+  if (views >= 250_000 || likes >= 10_000 || comments >= 2_000) {
+    return 'Hype moderado'
+  }
+
+  return 'Sinal inicial'
+}
+
 export function TitleDetailPage() {
   const { slug } = useParams()
 
   const [title, setTitle] = useState<DashboardTitle | null>(null)
   const [reviews, setReviews] = useState<DashboardRecentMention[]>([])
+  const [youtubeVideos, setYoutubeVideos] = useState<DashboardYoutubeMetric[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -65,7 +96,7 @@ export function TitleDetailPage() {
         return
       }
 
-      const [titleResponse, reviewsResponse] = await Promise.all([
+      const [titleResponse, reviewsResponse, youtubeResponse] = await Promise.all([
         supabase
           .from('dashboard_titles')
           .select('*')
@@ -78,6 +109,13 @@ export function TitleDetailPage() {
           .eq('slug', slug)
           .order('published_at', { ascending: false })
           .limit(30),
+
+        supabase
+          .from('dashboard_youtube_metrics')
+          .select('*')
+          .eq('slug', slug)
+          .order('view_count', { ascending: false })
+          .limit(6),
       ])
 
       if (titleResponse.error) {
@@ -90,6 +128,12 @@ export function TitleDetailPage() {
         console.error('Erro ao buscar reviews:', reviewsResponse.error)
       } else {
         setReviews(reviewsResponse.data ?? [])
+      }
+
+      if (youtubeResponse.error) {
+        console.error('Erro ao buscar vídeos do YouTube:', youtubeResponse.error)
+      } else {
+        setYoutubeVideos(youtubeResponse.data ?? [])
       }
 
       setLoading(false)
@@ -121,6 +165,22 @@ export function TitleDetailPage() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
   }, [reviews])
+
+  const youtubeTotals = useMemo(() => {
+    return youtubeVideos.reduce(
+      (acc, video) => {
+        acc.views += Number(video.view_count ?? 0)
+        acc.likes += Number(video.like_count ?? 0)
+        acc.comments += Number(video.comment_count ?? 0)
+        return acc
+      },
+      {
+        views: 0,
+        likes: 0,
+        comments: 0,
+      },
+    )
+  }, [youtubeVideos])
 
   if (loading) {
     return (
@@ -270,6 +330,90 @@ export function TitleDetailPage() {
             )}
           </div>
         </div>
+      </section>
+
+      <section className="panel">
+        <div className="section-heading compact">
+          <div>
+            <span className="eyebrow">Trailer Hype</span>
+            <h2>Trailers e sinais de hype no YouTube</h2>
+            <p>
+              Métricas coletadas a partir de vídeos públicos relacionados ao jogo.
+            </p>
+          </div>
+        </div>
+
+        {youtubeVideos.length > 0 ? (
+          <>
+            <div className="youtube-summary-grid">
+              <article>
+                <strong>{youtubeVideos.length}</strong>
+                <span>Vídeos monitorados</span>
+              </article>
+
+              <article>
+                <strong>{formatCompactNumber(youtubeTotals.views)}</strong>
+                <span>Views somadas</span>
+              </article>
+
+              <article>
+                <strong>{formatCompactNumber(youtubeTotals.likes)}</strong>
+                <span>Likes somados</span>
+              </article>
+
+              <article>
+                <strong>{formatCompactNumber(youtubeTotals.comments)}</strong>
+                <span>Comentários</span>
+              </article>
+            </div>
+
+            <div className="youtube-video-grid">
+              {youtubeVideos.map((video) => (
+                <article key={video.id} className="youtube-video-card">
+                  <div className="youtube-thumbnail">
+                    {video.thumbnail_url ? (
+                      <img src={video.thumbnail_url} alt={video.video_title} />
+                    ) : (
+                      <div className="cover-placeholder">Sem thumbnail</div>
+                    )}
+
+                    <span>
+                      <Play size={15} />
+                      {getYoutubeHypeLabel(video)}
+                    </span>
+                  </div>
+
+                  <div className="youtube-video-content">
+                    <h3>{video.video_title}</h3>
+
+                    <p>{video.channel_title ?? 'Canal não informado'}</p>
+
+                    <div className="youtube-video-stats">
+                      <span>{formatCompactNumber(video.view_count)} views</span>
+                      <span>{formatCompactNumber(video.like_count)} likes</span>
+                      <span>{formatCompactNumber(video.comment_count)} comentários</span>
+                    </div>
+
+                    <small>
+                      Publicado em: {formatReviewDate(video.published_at)}
+                    </small>
+
+                    {video.url && (
+                      <a href={video.url} target="_blank" rel="noreferrer">
+                        Abrir no YouTube
+                        <ExternalLink size={14} />
+                      </a>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
+        ) : (
+          <p className="empty-state">
+            Ainda não há vídeos do YouTube salvos para este título.
+          </p>
+        )}
       </section>
 
       <section className="panel">

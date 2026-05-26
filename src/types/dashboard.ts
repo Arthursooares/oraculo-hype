@@ -74,3 +74,20 @@ export type DashboardRecentMention = {
   summary: string | null
   keywords: string[] | null
 }
+
+export type DashboardYoutubeMetric = {
+  id: string
+  title_id: string
+  title_name: string
+  slug: string
+  youtube_video_id: string
+  video_title: string
+  channel_title: string | null
+  published_at: string | null
+  url: string | null
+  thumbnail_url: string | null
+  view_count: number
+  like_count: number
+  comment_count: number
+  collected_at: string | null
+}

@@ -728,3 +728,143 @@
     width: 100%;
   }
 }
+.youtube-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.youtube-summary-grid article {
+  background: rgba(2, 6, 23, 0.58);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.youtube-summary-grid strong {
+  display: block;
+  font-size: 1.7rem;
+  color: #22d3ee;
+}
+
+.youtube-summary-grid span {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  margin-top: 4px;
+}
+
+.youtube-video-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.youtube-video-card {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(2, 6, 23, 0.5);
+}
+
+.youtube-thumbnail {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: rgba(15, 23, 42, 0.82);
+  overflow: hidden;
+}
+
+.youtube-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.youtube-thumbnail span {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(2, 6, 23, 0.82);
+  border: 1px solid rgba(34, 211, 238, 0.34);
+  color: #e0f2fe;
+  font-size: 0.76rem;
+  font-weight: 900;
+  backdrop-filter: blur(12px);
+}
+
+.youtube-video-content {
+  padding: 16px;
+}
+
+.youtube-video-content h3 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.youtube-video-content p {
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+.youtube-video-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 10px;
+}
+
+.youtube-video-stats span {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.68);
+  border-radius: 999px;
+  color: #cbd5e1;
+  padding: 6px 9px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.youtube-video-content small {
+  display: block;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.youtube-video-content a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #22d3ee;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+
+.youtube-video-content a:hover {
+  color: #67e8f9;
+}
+
+@media (max-width: 980px) {
+  .youtube-video-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .youtube-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .youtube-video-grid,
+  .youtube-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

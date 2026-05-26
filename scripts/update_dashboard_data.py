@@ -6,6 +6,13 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
+
 SCRIPTS_TO_RUN = [
     "seed_games_rawg.py",
     "collect_steam_reviews.py",
@@ -20,6 +27,20 @@ REQUIRED_ENV_VARS = [
 ]
 
 
+def load_local_env() -> None:
+    env_path = PROJECT_ROOT / ".env"
+
+    if load_dotenv is None:
+        print("Aviso: python-dotenv não está instalado. Pulando leitura do .env.")
+        return
+
+    if env_path.exists():
+        print(f"Carregando variáveis locais de: {env_path}")
+        load_dotenv(env_path)
+    else:
+        print("Arquivo .env local não encontrado. Usando apenas variáveis do ambiente.")
+
+
 def validate_environment() -> None:
     print("Validando variáveis de ambiente da automação...")
 
@@ -30,12 +51,17 @@ def validate_environment() -> None:
             missing_vars.append(env_var)
 
     if missing_vars:
-        print("Erro: variáveis ausentes no ambiente do GitHub Actions:")
+        print("Erro: variáveis ausentes no ambiente:")
 
         for env_var in missing_vars:
             print(f"- {env_var}")
 
-        raise RuntimeError("Secrets obrigatórios não foram encontrados.")
+        print(
+            "\nNo computador local, confira se o arquivo .env existe na raiz do projeto.\n"
+            "No GitHub Actions, confira se os Repository Secrets foram criados."
+        )
+
+        raise RuntimeError("Variáveis obrigatórias não foram encontradas.")
 
     print("Variáveis de ambiente encontradas.")
 
@@ -66,6 +92,7 @@ def run_script(script_name: str) -> None:
 def main() -> None:
     print("Iniciando atualização automática do Oráculo de Hype...")
 
+    load_local_env()
     validate_environment()
 
     for script_name in SCRIPTS_TO_RUN:

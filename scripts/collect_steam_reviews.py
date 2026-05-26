@@ -24,30 +24,8 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 STEAM_REVIEWS_BASE_URL = "https://store.steampowered.com/appreviews"
-
-
-STEAM_GAMES = [
-    {
-        "slug": "sid-meiers-civilization-vii",
-        "steam_appid": 1295660,
-        "name": "Sid Meier's Civilization VII",
-    },
-    {
-        "slug": "monster-hunter-wilds",
-        "steam_appid": 2246340,
-        "name": "Monster Hunter Wilds",
-    },
-    {
-        "slug": "kingdom-come-deliverance-ii",
-        "steam_appid": 1771300,
-        "name": "Kingdom Come: Deliverance II",
-    },
-    {
-        "slug": "doom-the-dark-ages",
-        "steam_appid": 3017860,
-        "name": "DOOM: The Dark Ages",
-    },
-]
+MAX_REVIEWS_PER_GAME = 40
+MAX_GAMES_PER_RUN = 25
 
 
 def validate_env() -> None:
@@ -62,7 +40,7 @@ def validate_env() -> None:
         missing_vars.append("SUPABASE_SERVICE_ROLE_KEY")
 
     if missing_vars:
-        print("Erro: variáveis ausentes no arquivo .env:")
+        print("Erro: variáveis ausentes no ambiente:")
 
         for var in missing_vars:
             print(f"- {var}")
@@ -82,6 +60,35 @@ def supabase_headers() -> dict[str, str]:
         "Content-Type": "application/json",
         "Prefer": "resolution=merge-duplicates,return=representation",
     }
+
+
+def ensure_steam_source() -> str:
+    if not SUPABASE_URL:
+        raise RuntimeError("SUPABASE_URL não configurada.")
+
+    endpoint = f"{SUPABASE_URL}/rest/v1/sources"
+
+    payload = {
+        "name": "Steam Reviews",
+        "source_type": "community",
+        "base_url": "https://store.steampowered.com",
+    }
+
+    response = requests.post(
+        endpoint,
+        params={"on_conflict": "name"},
+        headers=supabase_headers(),
+        json=payload,
+        timeout=30,
+    )
+
+    if response.status_code not in [200, 201]:
+        print("Erro ao garantir fonte Steam Reviews.")
+        print(response.status_code)
+        print(response.text)
+        response.raise_for_status()
+
+    return get_source_id()
 
 
 def get_source_id() -> str:
@@ -113,16 +120,17 @@ def get_source_id() -> str:
     return data[0]["id"]
 
 
-def get_title_by_slug(slug: str) -> dict[str, Any] | None:
+def fetch_titles_with_steam_appid() -> list[dict[str, Any]]:
     if not SUPABASE_URL:
         raise RuntimeError("SUPABASE_URL não configurada.")
 
     endpoint = f"{SUPABASE_URL}/rest/v1/titles"
 
     params = {
-        "slug": f"eq.{slug}",
-        "select": "id,name,slug",
-        "limit": "1",
+        "steam_appid": "not.is.null",
+        "select": "id,name,slug,steam_appid",
+        "order": "last_synced_at.desc.nullslast",
+        "limit": str(MAX_GAMES_PER_RUN),
     }
 
     response = requests.get(
@@ -134,16 +142,10 @@ def get_title_by_slug(slug: str) -> dict[str, Any] | None:
 
     response.raise_for_status()
 
-    data = response.json()
-
-    if not data:
-        print(f"Título não encontrado no Supabase para slug: {slug}")
-        return None
-
-    return data[0]
+    return response.json()
 
 
-def fetch_steam_reviews(appid: int, max_reviews: int = 40) -> list[dict[str, Any]]:
+def fetch_steam_reviews(appid: int, max_reviews: int = MAX_REVIEWS_PER_GAME) -> list[dict[str, Any]]:
     print(f"Buscando reviews Steam para App ID {appid}...")
 
     reviews: list[dict[str, Any]] = []
@@ -175,7 +177,6 @@ def fetch_steam_reviews(appid: int, max_reviews: int = 40) -> list[dict[str, Any
         response.raise_for_status()
 
         payload = response.json()
-
         batch = payload.get("reviews", [])
 
         if not batch:
@@ -270,18 +271,18 @@ def save_mention(payload: dict[str, Any]) -> bool:
     return True
 
 
-def collect_reviews_for_game(
+def collect_reviews_for_title(
     source_id: str,
-    game_config: dict[str, Any],
-    max_reviews: int = 40,
+    title: dict[str, Any],
+    max_reviews: int = MAX_REVIEWS_PER_GAME,
 ) -> int:
-    title = get_title_by_slug(game_config["slug"])
+    steam_appid = title.get("steam_appid")
 
-    if not title:
+    if not steam_appid:
         return 0
 
     reviews = fetch_steam_reviews(
-        appid=game_config["steam_appid"],
+        appid=int(steam_appid),
         max_reviews=max_reviews,
     )
 
@@ -292,7 +293,7 @@ def collect_reviews_for_game(
             review=review,
             title_id=title["id"],
             source_id=source_id,
-            steam_appid=game_config["steam_appid"],
+            steam_appid=int(steam_appid),
         )
 
         saved = save_mention(payload)
@@ -310,26 +311,30 @@ def main() -> None:
 
     validate_env()
 
-    source_id = get_source_id()
+    source_id = ensure_steam_source()
+
+    titles = fetch_titles_with_steam_appid()
+
+    print(f"Títulos com Steam App ID encontrados: {len(titles)}")
 
     total_saved = 0
 
-    for game_config in STEAM_GAMES:
+    for title in titles:
         print("\n------------------------------")
-        print(f"Coletando reviews para: {game_config['name']}")
+        print(f"Coletando reviews para: {title['name']}")
 
         try:
-            total_saved += collect_reviews_for_game(
+            total_saved += collect_reviews_for_title(
                 source_id=source_id,
-                game_config=game_config,
-                max_reviews=40,
+                title=title,
+                max_reviews=MAX_REVIEWS_PER_GAME,
             )
         except requests.HTTPError as error:
-            print(f"Erro HTTP ao processar {game_config['name']}: {error}")
+            print(f"Erro HTTP ao processar {title['name']}: {error}")
         except requests.RequestException as error:
-            print(f"Erro de conexão ao processar {game_config['name']}: {error}")
+            print(f"Erro de conexão ao processar {title['name']}: {error}")
         except Exception as error:
-            print(f"Erro inesperado ao processar {game_config['name']}: {error}")
+            print(f"Erro inesperado ao processar {title['name']}: {error}")
 
         time.sleep(1)
 

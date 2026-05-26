@@ -337,43 +337,65 @@ def calculate_hype_score(
 ) -> dict[str, float | int]:
     mention_volume = len(mentions)
 
+    rawg_rating = float(title.get("rawg_rating") or 0)
+    rawg_component = max(0, min(rawg_rating * 20, 100))
+
+    critic_score_avg = float(title.get("rawg_metacritic") or 0)
+
     if sentiments:
         sentiment_avg = round(
             mean(float(item["sentiment_score"]) for item in sentiments),
             2,
         )
+
+        positive_count = sum(
+            1 for item in sentiments if item["sentiment_label"] == "positive"
+        )
+
+        positive_ratio = positive_count / len(sentiments)
+        user_score_avg = round(positive_ratio * 100, 2)
+
+        upvotes = [int(item.get("upvotes") or 0) for item in mentions]
+        avg_upvotes = mean(upvotes) if upvotes else 0
+
+        sentiment_component = sentiment_avg * 0.55
+        volume_component = min(mention_volume, 50) / 50 * 25
+        engagement_component = min(avg_upvotes, 50) / 50 * 10
+        rawg_component_weighted = rawg_component * 0.10
+
+        hype_score = (
+            sentiment_component
+            + volume_component
+            + engagement_component
+            + rawg_component_weighted
+        )
+
     else:
         sentiment_avg = 0.0
+        user_score_avg = rawg_component
 
-    rawg_rating = float(title.get("rawg_rating") or 0)
-    rawg_component = min(rawg_rating * 20, 100)
+        release_bonus = 8.0
 
-    upvotes = [int(item.get("upvotes") or 0) for item in mentions]
-    avg_upvotes = mean(upvotes) if upvotes else 0
+        if title.get("release_date"):
+            release_bonus = 12.0
 
-    sentiment_component = sentiment_avg * 0.55
-    volume_component = min(mention_volume, 50) / 50 * 25
-    engagement_component = min(avg_upvotes, 50) / 50 * 10
-    rawg_component_weighted = rawg_component * 0.10
+        data_bonus = 0.0
 
-    hype_score = (
-        sentiment_component
-        + volume_component
-        + engagement_component
-        + rawg_component_weighted
-    )
+        if title.get("cover_url"):
+            data_bonus += 4.0
+
+        if title.get("rawg_rating") is not None:
+            data_bonus += 4.0
+
+        if title.get("rawg_metacritic") is not None:
+            data_bonus += 4.0
+
+        hype_score = (rawg_component * 0.75) + release_bonus + data_bonus
+
+        if rawg_rating == 0:
+            hype_score = 0.0
 
     hype_score = round(max(0, min(hype_score, 100)), 2)
-
-    positive_count = sum(
-        1 for item in sentiments if item["sentiment_label"] == "positive"
-    )
-
-    positive_ratio = positive_count / len(sentiments) if sentiments else 0
-
-    user_score_avg = round(positive_ratio * 100, 2)
-
-    critic_score_avg = float(title.get("rawg_metacritic") or 0)
 
     return {
         "hype_score": hype_score,

@@ -14,8 +14,8 @@ import type {
 
 type DashboardFilter =
   | 'all'
-  | 'withSteam'
-  | 'withoutSteam'
+  | 'withMentions'
+  | 'withoutMentions'
   | 'highestHype'
   | 'highestMentions'
   | 'lowestSentiment'
@@ -28,15 +28,15 @@ const FILTERS: { label: string; value: DashboardFilter }[] = [
     value: 'all',
   },
   {
-    label: 'Com reviews Steam',
-    value: 'withSteam',
+    label: 'Com menções',
+    value: 'withMentions',
   },
   {
-    label: 'Sem reviews Steam',
-    value: 'withoutSteam',
+    label: 'Sem menções',
+    value: 'withoutMentions',
   },
   {
-    label: 'Maior hype',
+    label: 'Maior score',
     value: 'highestHype',
   },
   {
@@ -87,13 +87,13 @@ function getFilteredAndSortedTitles(
 ) {
   const titlesCopy = [...titles]
 
-  if (selectedFilter === 'withSteam') {
+  if (selectedFilter === 'withMentions') {
     return titlesCopy
       .filter((title) => title.mention_volume > 0)
       .sort((a, b) => b.hype_score - a.hype_score)
   }
 
-  if (selectedFilter === 'withoutSteam') {
+  if (selectedFilter === 'withoutMentions') {
     return titlesCopy
       .filter((title) => title.mention_volume === 0)
       .sort((a, b) => b.hype_score - a.hype_score)
@@ -136,13 +136,15 @@ function getFilteredAndSortedTitles(
 function getFilterDescription(selectedFilter: DashboardFilter) {
   const descriptions: Record<DashboardFilter, string> = {
     all: 'Mostrando todos os títulos monitorados pelo Oráculo.',
-    withSteam: 'Mostrando apenas títulos com reviews reais da Steam analisadas.',
-    withoutSteam:
-      'Mostrando títulos que ainda dependem de dados de mercado, sem reviews Steam salvas.',
-    highestHype: 'Ordenando os títulos pelo maior Hype Score.',
-    highestMentions: 'Ordenando os títulos pelo maior volume de menções analisadas.',
+    withMentions:
+      'Mostrando títulos com menções públicas analisadas, como reviews da Steam e comentários do YouTube.',
+    withoutMentions:
+      'Mostrando títulos que ainda dependem de dados de mercado e sinais de vídeo, sem base textual suficiente.',
+    highestHype: 'Ordenando os títulos pelo maior Score geral.',
+    highestMentions:
+      'Ordenando os títulos pelo maior volume de menções públicas analisadas.',
     lowestSentiment:
-      'Mostrando títulos com reviews Steam e sentimento médio mais baixo.',
+      'Mostrando títulos com base textual e sentimento médio mais baixo.',
     upcoming: 'Mostrando jogos com lançamento futuro.',
     released: 'Mostrando jogos já lançados.',
   }
@@ -201,11 +203,11 @@ export function DashboardPage() {
 
   const topTitle = titles[0]
 
-  const titlesWithSteam = useMemo(() => {
+  const titlesWithMentions = useMemo(() => {
     return titles.filter((title) => title.mention_volume > 0).length
   }, [titles])
 
-  const titlesWithoutSteam = useMemo(() => {
+  const titlesWithoutMentions = useMemo(() => {
     return titles.filter((title) => title.mention_volume === 0).length
   }, [titles])
 
@@ -244,8 +246,8 @@ export function DashboardPage() {
 
           <div className="dashboard-controls-stats">
             <span>{titles.length} títulos</span>
-            <span>{titlesWithSteam} com Steam</span>
-            <span>{titlesWithoutSteam} sem Steam</span>
+            <span>{titlesWithMentions} com menções</span>
+            <span>{titlesWithoutMentions} sem menções</span>
             <span>{upcomingTitles} futuros</span>
           </div>
         </div>

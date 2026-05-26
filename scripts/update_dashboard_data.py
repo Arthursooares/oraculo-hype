@@ -15,8 +15,13 @@ except ImportError:
 
 SCRIPTS_TO_RUN = [
     "seed_games_rawg.py",
+    "enrich_igdb_catalog.py",
+    "enrich_steam_appids.py",
     "collect_steam_reviews.py",
-    "calculate_steam_community_scores.py",
+    "collect_youtube_trailer_metrics.py",
+    "collect_youtube_comments.py",
+    "promote_evaluated_titles.py",
+    "calculate_combined_hype_scores.py",
 ]
 
 
@@ -24,6 +29,9 @@ REQUIRED_ENV_VARS = [
     "SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
     "RAWG_API_KEY",
+    "YOUTUBE_API_KEY",
+    "IGDB_CLIENT_ID",
+    "IGDB_CLIENT_SECRET",
 ]
 
 

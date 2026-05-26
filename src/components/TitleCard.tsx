@@ -19,8 +19,19 @@ function formatNullableScore(value: number | null | undefined) {
 }
 
 function formatDataOrigin(title: DashboardTitle) {
-  if (title.data_origin === 'rawg' && title.mention_volume > 0) {
-    return 'RAWG API + Steam Reviews'
+  const hasTextMentions = title.mention_volume > 0
+  const hasYoutubeVideos = Number(title.youtube_video_count ?? 0) > 0
+
+  if (title.data_origin === 'rawg' && hasTextMentions && hasYoutubeVideos) {
+    return 'RAWG API + Menções públicas + YouTube'
+  }
+
+  if (title.data_origin === 'rawg' && hasTextMentions) {
+    return 'RAWG API + Menções públicas'
+  }
+
+  if (title.data_origin === 'rawg' && hasYoutubeVideos) {
+    return 'RAWG API + YouTube'
   }
 
   if (title.data_origin === 'rawg') {
@@ -36,7 +47,7 @@ function formatDataOrigin(title: DashboardTitle) {
 
 function getScoreLabel(title: DashboardTitle) {
   if (title.mention_volume > 0) {
-    return 'Hype Score'
+    return 'Score'
   }
 
   return 'Score de Mercado'
@@ -71,7 +82,11 @@ export function TitleCard({ title }: TitleCardProps) {
           <div className="metrics-grid">
             <div>
               <strong>{formatNullableScore(title.sentiment_avg)}</strong>
-              <span>Sentimento</span>
+              <span>
+                {title.mention_volume > 0
+                  ? 'Sentimento'
+                  : 'Base textual insuficiente'}
+              </span>
             </div>
 
             <div>
@@ -81,7 +96,11 @@ export function TitleCard({ title }: TitleCardProps) {
 
             <div>
               <strong>{formatNullableScore(title.user_score_avg)}</strong>
-              <span>Usuários</span>
+              <span>
+                {title.mention_volume > 0
+                  ? 'Público'
+                  : 'Sem base textual'}
+              </span>
             </div>
 
             <div>

@@ -9,9 +9,33 @@ jobs:
   update-data:
     runs-on: ubuntu-latest
 
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      RAWG_API_KEY: ${{ secrets.RAWG_API_KEY }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Check required secrets
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "SUPABASE_URL is missing"
+            exit 1
+          fi
+
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "SUPABASE_SERVICE_ROLE_KEY is missing"
+            exit 1
+          fi
+
+          if [ -z "$RAWG_API_KEY" ]; then
+            echo "RAWG_API_KEY is missing"
+            exit 1
+          fi
+
+          echo "All required secrets are available."
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -22,8 +46,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run data update pipeline
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          RAWG_API_KEY: ${{ secrets.RAWG_API_KEY }}
         run: python scripts/update_dashboard_data.py

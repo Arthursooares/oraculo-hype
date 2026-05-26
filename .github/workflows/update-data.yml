@@ -2,7 +2,7 @@ name: Update Oraculo Hype Data
 
 on:
   schedule:
-    - cron: "0 9 * * *"
+    - cron: "17 9 * * *"
   workflow_dispatch:
 
 jobs:
@@ -13,6 +13,9 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       RAWG_API_KEY: ${{ secrets.RAWG_API_KEY }}
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+      IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
 
     steps:
       - name: Checkout repository
@@ -32,6 +35,21 @@ jobs:
 
           if [ -z "$RAWG_API_KEY" ]; then
             echo "RAWG_API_KEY is missing"
+            exit 1
+          fi
+
+          if [ -z "$YOUTUBE_API_KEY" ]; then
+            echo "YOUTUBE_API_KEY is missing"
+            exit 1
+          fi
+
+          if [ -z "$IGDB_CLIENT_ID" ]; then
+            echo "IGDB_CLIENT_ID is missing"
+            exit 1
+          fi
+
+          if [ -z "$IGDB_CLIENT_SECRET" ]; then
+            echo "IGDB_CLIENT_SECRET is missing"
             exit 1
           fi
 
